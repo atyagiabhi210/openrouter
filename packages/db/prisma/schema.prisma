@@ -27,6 +27,8 @@ model ApiKey {
   disabled  Boolean    @default(false)
   deleted   Boolean    @default(false) // because api key will be referenced by conversations so if user deletes the api key i do not want to delete the conversation
   user      User       @relation(fields: [userId], references: [id])
+  lastUsed  DateTime?   @default(now())
+  creditsConsumed Int @default(0)
   conversations Conversation[]
 }
 
