@@ -6,7 +6,7 @@ import {
   type SignUpInput,
   type SignUpResponse,
 } from "../schemas/auth.schema";
-import { prisma } from "db/client";
+import { prisma } from "db";
 import type { ErrorResponse } from "../schemas/error.schema";
 
 export const handleSignService = async (
