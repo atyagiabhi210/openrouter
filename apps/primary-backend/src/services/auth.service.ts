@@ -8,12 +8,14 @@ import {
 } from "../schemas/auth.schema";
 import { prisma } from "db";
 import type { ErrorResponse } from "../schemas/error.schema";
+import { createSessionToken } from "./jwt.service";
 
 export const handleSignService = async (
   body: SignInInput,
 ): Promise<SignInResponse | ErrorResponse> => {
   try {
     console.log("handleSignService", body);
+    // we will process it
     const result = signInSchema.safeParse(body);
     if (!result.success) {
       return {
@@ -26,15 +28,52 @@ export const handleSignService = async (
     }
     const { email, password } = result.data;
 
-    // we will process it
     // check if user already exists
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email,
+      },
+    });
     // if not return error
-    // if user exists, generate token
-    // return token
+    if (!user) {
+      return {
+        success: false,
+        code: "USER_NOT_FOUND",
+        message: "User not found",
+        status: 404,
+        data: {
+          email: email,
+        },
+      };
+    }
+    if (user) {
+      const matched = await Bun.password.verify(password, user.password);
+      if (matched) {
+        const token = await createSessionToken(user.id, user.email);
+        return {
+          token: token,
+          email: user.email,
+          id: user.id,
+        };
+      }
+      return {
+        success: false,
+        code: "INVALID_CREDENTIALS",
+        message: "Invalid credentials",
+        status: 401,
+        data: {
+          email: email,
+        },
+      };
+    }
     return {
-      token: "1234567890",
-      email: email,
-      id: 1,
+      success: false,
+      code: "USER_NOT_FOUND",
+      message: "User not found",
+      status: 404,
+      data: {
+        email: email,
+      },
     };
   } catch (err) {
     throw err;
@@ -46,6 +85,7 @@ export const handleSignUpService = async (
 ): Promise<SignUpResponse | ErrorResponse> => {
   try {
     console.log("handleSignUpService", body);
+    // we will process it
     const result = signUpSchema.safeParse(body);
     if (!result.success) {
       return {
@@ -57,16 +97,45 @@ export const handleSignUpService = async (
       };
     }
     const { name, email, password } = result.data;
-    // we will process it
-    // check if user already exists
-    // if not, create user
-    // generate token
-    // return token
 
+    // check if user already exists
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email,
+      },
+    });
+    if (user) {
+      return {
+        success: false,
+        code: "USER_ALREADY_EXISTS",
+        message: "User already exists",
+        status: 400,
+        data: {
+          email: email,
+        },
+      };
+    }
+    // if not, create user
+    const newUser = await prisma.user.create({
+      data: {
+        name: name,
+        email: email,
+        password: await Bun.password.hash(password),
+      },
+    });
+    if (!newUser) {
+      return {
+        success: false,
+        code: "USER_CREATION_FAILED",
+        message: "User creation failed",
+        status: 500,
+      };
+    }
+    const token = await createSessionToken(newUser.id, newUser.email);
     return {
-      token: "1234567890",
-      email: email,
-      id: 1,
+      token: token,
+      email: newUser.email,
+      id: newUser.id,
     };
   } catch (err) {
     throw err;
