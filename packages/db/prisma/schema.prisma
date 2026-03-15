@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id        Int     @id       @default(autoincrement())
+  email     String     @unique
+  password  String
+  credits   Int        @default(0) // This is how you show 1:1 relationship
+  apiKeys   ApiKey[]   // This is how you show 1:many relationship
+  conversations Conversation[]
+  onrampTransactions OnrampTransaction[]
+}
+
+model ApiKey {
+  id        Int     @id     @default(autoincrement())
+  userId    Int
+  name      String
+  apiKey    String     // maybe need to encrypt this do not store keys in plain text
+  disabled  Boolean    @default(false)
+  deleted   Boolean    @default(false) // because api key will be referenced by conversations so if user deletes the api key i do not want to delete the conversation
+  user      User       @relation(fields: [userId], references: [id])
+  conversations Conversation[]
+}
+
+model Company {
+  id        Int     @id     @default(autoincrement())
+  name      String
+  website   String
+  models    Model[]
+}
+
+
+model Model {
+  id        Int     @id     @default(autoincrement())
+  name      String
+  companyId Int
+  slug      String   
+  company   Company  @relation(fields: [companyId], references: [id])
+  modelProviderMappings  ModelProviderMapping[]
+}
+
+model Provider {
+  id        Int     @id     @default(autoincrement())
+  name      String
+  website   String
+  modelProviderMappings  ModelProviderMapping[]
+}
+
+
+model ModelProviderMapping {
+  id        Int     @id     @default(autoincrement())
+  modelId   Int
+  providerId Int
+  inputTokenCost Int
+  outputTokenCost Int
+  model   Model    @relation(fields: [modelId], references: [id])
+  provider   Provider    @relation(fields: [providerId], references: [id])
+  conversations Conversation[] 
+}
+// above is how you show many to many relationship
+
+model OnrampTransaction {
+  id        Int     @id     @default(autoincrement())
+  userId    Int
+  amount   Int
+  status   String
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Conversation {
+  id        Int     @id     @default(autoincrement())
+  userId    Int
+  apiKeyId  Int
+  modelProviderMappingId Int
+  input String
+  output String
+  inputTokenCount Int
+  outputTokenCount Int
+  user     User     @relation(fields: [userId], references: [id])
+  apiKey     ApiKey     @relation(fields: [apiKeyId], references: [id])
+  modelProviderMapping     ModelProviderMapping     @relation(fields: [modelProviderMappingId], references: [id])
+}
