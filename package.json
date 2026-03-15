@@ -24,6 +24,7 @@
   ],
   "dependencies": {
     "@prisma/adapter-libsql": "^7.5.0",
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0"
   }
 }
